@@ -14,7 +14,127 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      events: {
+        Row: {
+          created_at: string
+          draw_completed: boolean
+          host_email: string
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          draw_completed?: boolean
+          host_email: string
+          id?: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          draw_completed?: boolean
+          host_email?: string
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
+      messages: {
+        Row: {
+          content: string
+          created_at: string
+          event_id: string
+          id: string
+          recipient_id: string
+          sender_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          event_id: string
+          id?: string
+          recipient_id: string
+          sender_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          event_id?: string
+          id?: string
+          recipient_id?: string
+          sender_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "messages_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_recipient_id_fkey"
+            columns: ["recipient_id"]
+            isOneToOne: false
+            referencedRelation: "participants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "participants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      participants: {
+        Row: {
+          assigned_to_id: string | null
+          created_at: string
+          email: string
+          event_id: string
+          id: string
+          name: string
+          wishlist_q1: string
+          wishlist_q2: string
+        }
+        Insert: {
+          assigned_to_id?: string | null
+          created_at?: string
+          email: string
+          event_id: string
+          id?: string
+          name: string
+          wishlist_q1: string
+          wishlist_q2: string
+        }
+        Update: {
+          assigned_to_id?: string | null
+          created_at?: string
+          email?: string
+          event_id?: string
+          id?: string
+          name?: string
+          wishlist_q1?: string
+          wishlist_q2?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "participants_assigned_to_id_fkey"
+            columns: ["assigned_to_id"]
+            isOneToOne: false
+            referencedRelation: "participants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "participants_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never

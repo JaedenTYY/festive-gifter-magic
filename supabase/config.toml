@@ -1,1 +1,4 @@
 project_id = "gkhtrkvzemqhpvxaaanc"
+
+[functions.run-secret-santa]
+verify_jwt = false
