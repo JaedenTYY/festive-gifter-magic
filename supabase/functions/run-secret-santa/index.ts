@@ -89,18 +89,24 @@ serve(async (req) => {
     // Generate pairings
     const pairings = generateSecretSantaPairs(participants);
 
-    // Update database with assignments
-    const updates = [];
+    // Delete existing matches for this event (in case of re-draw)
+    await supabase.from("matches").delete().eq("event_id", eventId);
+
+    // Insert new matches
+    const matchInserts = [];
     for (const [giverId, receiverId] of pairings.entries()) {
-      updates.push(
-        supabase
-          .from("participants")
-          .update({ assigned_to_id: receiverId })
-          .eq("id", giverId)
-      );
+      matchInserts.push({
+        event_id: eventId,
+        giver_id: giverId,
+        receiver_id: receiverId,
+      });
     }
 
-    await Promise.all(updates);
+    const { error: matchError } = await supabase
+      .from("matches")
+      .insert(matchInserts);
+
+    if (matchError) throw matchError;
 
     console.log("Assignments saved to database");
 

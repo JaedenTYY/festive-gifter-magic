@@ -38,7 +38,7 @@ const JoinEvent = () => {
     setLoading(true);
 
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from("participants")
         .insert([
           {
@@ -48,12 +48,19 @@ const JoinEvent = () => {
             wishlist_q1: wishlistQ1,
             wishlist_q2: wishlistQ2,
           },
-        ]);
+        ])
+        .select()
+        .single();
 
       if (error) throw error;
 
-      toast.success("Successfully joined the event! 🎄");
-      navigate(`/event/${eventId}/success`);
+      // Send welcome email
+      await supabase.functions.invoke("send-welcome-email", {
+        body: { participantId: data.id, eventId },
+      });
+
+      toast.success("Successfully joined! Check your email for confirmation 🎄");
+      navigate(`/event/${eventId}/waiting/${data.id}`);
     } catch (error: any) {
       toast.error(error.message || "Failed to join event");
     } finally {

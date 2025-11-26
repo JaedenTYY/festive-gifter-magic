@@ -18,25 +18,77 @@ export type Database = {
         Row: {
           created_at: string
           draw_completed: boolean
+          event_description: string | null
           host_email: string
           id: string
           name: string
+          registration_open: boolean | null
         }
         Insert: {
           created_at?: string
           draw_completed?: boolean
+          event_description?: string | null
           host_email: string
           id?: string
           name: string
+          registration_open?: boolean | null
         }
         Update: {
           created_at?: string
           draw_completed?: boolean
+          event_description?: string | null
           host_email?: string
           id?: string
           name?: string
+          registration_open?: boolean | null
         }
         Relationships: []
+      }
+      matches: {
+        Row: {
+          created_at: string
+          event_id: string
+          giver_id: string
+          id: string
+          receiver_id: string
+        }
+        Insert: {
+          created_at?: string
+          event_id: string
+          giver_id: string
+          id?: string
+          receiver_id: string
+        }
+        Update: {
+          created_at?: string
+          event_id?: string
+          giver_id?: string
+          id?: string
+          receiver_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "matches_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "matches_giver_id_fkey"
+            columns: ["giver_id"]
+            isOneToOne: false
+            referencedRelation: "participants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "matches_receiver_id_fkey"
+            columns: ["receiver_id"]
+            isOneToOne: false
+            referencedRelation: "participants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       messages: {
         Row: {
@@ -44,6 +96,7 @@ export type Database = {
           created_at: string
           event_id: string
           id: string
+          match_id: string | null
           recipient_id: string
           sender_id: string
         }
@@ -52,6 +105,7 @@ export type Database = {
           created_at?: string
           event_id: string
           id?: string
+          match_id?: string | null
           recipient_id: string
           sender_id: string
         }
@@ -60,6 +114,7 @@ export type Database = {
           created_at?: string
           event_id?: string
           id?: string
+          match_id?: string | null
           recipient_id?: string
           sender_id?: string
         }
@@ -69,6 +124,13 @@ export type Database = {
             columns: ["event_id"]
             isOneToOne: false
             referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: false
+            referencedRelation: "matches"
             referencedColumns: ["id"]
           },
           {
@@ -89,7 +151,6 @@ export type Database = {
       }
       participants: {
         Row: {
-          assigned_to_id: string | null
           created_at: string
           email: string
           event_id: string
@@ -99,7 +160,6 @@ export type Database = {
           wishlist_q2: string
         }
         Insert: {
-          assigned_to_id?: string | null
           created_at?: string
           email: string
           event_id: string
@@ -109,7 +169,6 @@ export type Database = {
           wishlist_q2: string
         }
         Update: {
-          assigned_to_id?: string | null
           created_at?: string
           email?: string
           event_id?: string
@@ -119,13 +178,6 @@ export type Database = {
           wishlist_q2?: string
         }
         Relationships: [
-          {
-            foreignKeyName: "participants_assigned_to_id_fkey"
-            columns: ["assigned_to_id"]
-            isOneToOne: false
-            referencedRelation: "participants"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "participants_event_id_fkey"
             columns: ["event_id"]
