@@ -3,7 +3,7 @@ import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
 import { Loader2, Send, Gift } from "lucide-react";
@@ -13,12 +13,12 @@ const AnonymousChat = () => {
   const [message, setMessage] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const { data: participant } = useQuery({
+  const { data: participant, isLoading: participantLoading } = useQuery({
     queryKey: ["participant", participantId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("participants")
-        .select("*, assigned_to:assigned_to_id(*)")
+        .select("*")
         .eq("id", participantId)
         .single();
 
@@ -27,37 +27,55 @@ const AnonymousChat = () => {
     },
   });
 
-  const { data: messages, refetch } = useQuery({
-    queryKey: ["messages", participantId],
+  const { data: match } = useQuery({
+    queryKey: ["match", participantId],
     queryFn: async () => {
-      if (!participant?.assigned_to_id) return [];
+      const { data, error } = await supabase
+        .from("matches")
+        .select(`
+          *,
+          receiver:participants!matches_receiver_id_fkey(*)
+        `)
+        .eq("giver_id", participantId)
+        .single();
 
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!participantId,
+  });
+
+  const receiver = match?.receiver;
+  const matchId = match?.id;
+
+  const { data: messages, refetch } = useQuery({
+    queryKey: ["messages", matchId],
+    queryFn: async () => {
+      if (!matchId) return [];
       const { data, error } = await supabase
         .from("messages")
         .select("*")
-        .or(
-          `and(sender_id.eq.${participantId},recipient_id.eq.${participant.assigned_to_id}),and(sender_id.eq.${participant.assigned_to_id},recipient_id.eq.${participantId})`
-        )
+        .eq("match_id", matchId)
         .order("created_at", { ascending: true });
 
       if (error) throw error;
       return data;
     },
-    enabled: !!participant,
+    enabled: !!matchId,
   });
 
   useEffect(() => {
-    if (!participant?.event_id || !participantId || !participant?.assigned_to_id) return;
+    if (!matchId) return;
 
     const channel = supabase
       .channel("messages")
       .on(
         "postgres_changes",
         {
-          event: "INSERT",
+          event: "*",
           schema: "public",
           table: "messages",
-          filter: `event_id=eq.${participant.event_id}`,
+          filter: `match_id=eq.${matchId}`,
         },
         () => {
           refetch();
@@ -68,7 +86,7 @@ const AnonymousChat = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [participant, participantId, refetch]);
+  }, [matchId, refetch]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -76,30 +94,46 @@ const AnonymousChat = () => {
 
   const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!message.trim() || !participant?.assigned_to_id) return;
+    if (!message.trim() || !matchId || !receiver) return;
 
     try {
       const { error } = await supabase.from("messages").insert([
         {
-          event_id: participant.event_id,
+          event_id: participant!.event_id,
+          match_id: matchId,
           sender_id: participantId,
-          recipient_id: participant.assigned_to_id,
+          recipient_id: receiver.id,
           content: message,
         },
       ]);
 
       if (error) throw error;
-
       setMessage("");
+      refetch();
     } catch (error: any) {
       toast.error(error.message || "Failed to send message");
     }
   };
 
-  if (!participant) {
+  if (participantLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!participant || !match) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <Card className="max-w-md">
+          <CardHeader>
+            <CardTitle>No Assignment Yet</CardTitle>
+            <CardDescription>
+              Wait for the host to run the Secret Santa draw
+            </CardDescription>
+          </CardHeader>
+        </Card>
       </div>
     );
   }

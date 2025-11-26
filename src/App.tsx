@@ -10,6 +10,8 @@ import JoinEvent from "./pages/JoinEvent";
 import HostDashboard from "./pages/HostDashboard";
 import AnonymousChat from "./pages/AnonymousChat";
 import Success from "./pages/Success";
+import WaitingRoom from "./pages/WaitingRoom";
+import Assignment from "./pages/Assignment";
 
 const queryClient = new QueryClient();
 
@@ -24,6 +26,8 @@ const App = () => (
           <Route path="/event/:eventId/join" element={<JoinEvent />} />
           <Route path="/event/:eventId/host" element={<HostDashboard />} />
           <Route path="/event/:eventId/success" element={<Success />} />
+          <Route path="/event/:eventId/waiting/:participantId" element={<WaitingRoom />} />
+          <Route path="/event/:eventId/assignment/:participantId" element={<Assignment />} />
           <Route path="/chat/:participantId" element={<AnonymousChat />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />

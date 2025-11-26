@@ -11,6 +11,7 @@ import { Gift, Sparkles } from "lucide-react";
 const CreateEvent = () => {
   const navigate = useNavigate();
   const [eventName, setEventName] = useState("");
+  const [eventDescription, setEventDescription] = useState("");
   const [hostEmail, setHostEmail] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -21,7 +22,12 @@ const CreateEvent = () => {
     try {
       const { data, error } = await supabase
         .from("events")
-        .insert([{ name: eventName, host_email: hostEmail }])
+        .insert([{ 
+          name: eventName, 
+          event_description: eventDescription,
+          host_email: hostEmail,
+          registration_open: true 
+        }])
         .select()
         .single();
 
@@ -69,6 +75,15 @@ const CreateEvent = () => {
                   value={eventName}
                   onChange={(e) => setEventName(e.target.value)}
                   required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="eventDescription">Event Description (Optional)</Label>
+                <Input
+                  id="eventDescription"
+                  placeholder="Annual office Secret Santa"
+                  value={eventDescription}
+                  onChange={(e) => setEventDescription(e.target.value)}
                 />
               </div>
               <div className="space-y-2">
