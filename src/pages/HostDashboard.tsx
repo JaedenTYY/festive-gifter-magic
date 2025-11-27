@@ -165,8 +165,9 @@ const HostDashboard = () => {
     );
   }
 
-  // Check if user owns this event
-  if ((event as any)?.user_id && (event as any).user_id !== user.id) {
+  // Check if user owns this event (optional check for backward compatibility)
+  const eventData = event as any;
+  if (eventData?.user_id && eventData.user_id !== user.id) {
     return (
       <div className="min-h-screen flex items-center justify-center p-4">
         <Card className="max-w-md">
