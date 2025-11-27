@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -14,9 +14,37 @@ const CreateEvent = () => {
   const [eventDescription, setEventDescription] = useState("");
   const [hostEmail, setHostEmail] = useState("");
   const [loading, setLoading] = useState(false);
+  const [user, setUser] = useState<any>(null);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+      if (session?.user?.email) {
+        setHostEmail(session.user.email);
+      }
+    });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+      if (session?.user?.email) {
+        setHostEmail(session.user.email);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   const handleCreateEvent = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!user) {
+      toast.error("Please sign in to create an event");
+      navigate("/auth");
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -26,7 +54,8 @@ const CreateEvent = () => {
           name: eventName, 
           event_description: eventDescription,
           host_email: hostEmail,
-          registration_open: true 
+          registration_open: true,
+          user_id: user.id,
         }])
         .select()
         .single();
@@ -41,6 +70,37 @@ const CreateEvent = () => {
       setLoading(false);
     }
   };
+
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-background via-accent/5 to-primary/5 flex items-center justify-center p-4">
+        <Card className="w-full max-w-md shadow-festive">
+          <CardHeader className="text-center">
+            <Gift className="h-12 w-12 text-primary mx-auto mb-4" />
+            <CardTitle className="text-2xl">Authentication Required</CardTitle>
+            <CardDescription>
+              Please sign in to create Secret Santa events
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <Button
+              onClick={() => navigate("/auth")}
+              className="w-full bg-gradient-hero hover:opacity-90 transition-all"
+            >
+              Sign In / Create Account
+            </Button>
+            <Button
+              onClick={() => navigate("/")}
+              variant="outline"
+              className="w-full"
+            >
+              Back to Home
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-accent/5 to-primary/5 flex items-center justify-center p-4">
@@ -95,6 +155,7 @@ const CreateEvent = () => {
                   value={hostEmail}
                   onChange={(e) => setHostEmail(e.target.value)}
                   required
+                  disabled
                 />
               </div>
               <Button

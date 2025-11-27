@@ -12,6 +12,7 @@ import AnonymousChat from "./pages/AnonymousChat";
 import Success from "./pages/Success";
 import WaitingRoom from "./pages/WaitingRoom";
 import Assignment from "./pages/Assignment";
+import Auth from "./pages/Auth";
 
 const queryClient = new QueryClient();
 
@@ -23,6 +24,7 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<CreateEvent />} />
+          <Route path="/auth" element={<Auth />} />
           <Route path="/event/:eventId/join" element={<JoinEvent />} />
           <Route path="/event/:eventId/host" element={<HostDashboard />} />
           <Route path="/event/:eventId/success" element={<Success />} />

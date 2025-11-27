@@ -97,19 +97,30 @@ const AnonymousChat = () => {
     if (!message.trim() || !matchId || !receiver) return;
 
     try {
-      const { error } = await supabase.from("messages").insert([
-        {
-          event_id: participant!.event_id,
-          match_id: matchId,
-          sender_id: participantId,
-          recipient_id: receiver.id,
-          content: message,
-        },
-      ]);
+      const { data: newMessage, error } = await supabase
+        .from("messages")
+        .insert([
+          {
+            event_id: participant!.event_id,
+            match_id: matchId,
+            sender_id: participantId,
+            recipient_id: receiver.id,
+            content: message,
+          },
+        ])
+        .select()
+        .single();
 
       if (error) throw error;
+
+      // Send email notification
+      await supabase.functions.invoke("send-message-notification", {
+        body: { messageId: newMessage.id },
+      });
+
       setMessage("");
       refetch();
+      toast.success("Message sent!");
     } catch (error: any) {
       toast.error(error.message || "Failed to send message");
     }
