@@ -35,9 +35,29 @@ const JoinEvent = () => {
 
   const handleJoin = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!event?.registration_open) {
+      toast.error("Registration is closed for this event");
+      return;
+    }
+
     setLoading(true);
 
     try {
+      // Check if email already registered for this event
+      const { data: existingParticipant } = await supabase
+        .from("participants")
+        .select("id")
+        .eq("event_id", eventId)
+        .eq("email", email)
+        .single();
+
+      if (existingParticipant) {
+        toast.error("This email is already registered for this event");
+        setLoading(false);
+        return;
+      }
+
       const { data, error } = await supabase
         .from("participants")
         .insert([
@@ -72,6 +92,26 @@ const JoinEvent = () => {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!event?.registration_open) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-background via-accent/5 to-primary/5 flex items-center justify-center p-4">
+        <Card className="max-w-md shadow-festive">
+          <CardHeader>
+            <CardTitle>Registration Closed</CardTitle>
+            <CardDescription>
+              Registration for this event is no longer open
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-muted-foreground">
+              Please contact the event host if you believe this is an error.
+            </p>
+          </CardContent>
+        </Card>
       </div>
     );
   }

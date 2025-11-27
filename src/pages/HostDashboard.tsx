@@ -1,17 +1,46 @@
-import { useState } from "react";
-import { useParams } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
-import { Loader2, Users, Gift, Copy, Check } from "lucide-react";
+import { Loader2, Users, Gift, Copy, Check, Lock, Unlock, RefreshCw, AlertTriangle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const HostDashboard = () => {
   const { eventId } = useParams();
+  const navigate = useNavigate();
   const [runningDraw, setRunningDraw] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [user, setUser] = useState<any>(null);
+  const [togglingRegistration, setTogglingRegistration] = useState(false);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+    });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   const { data: event, refetch: refetchEvent } = useQuery({
     queryKey: ["event", eventId],
@@ -49,7 +78,32 @@ const HostDashboard = () => {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleRunDraw = async () => {
+  const toggleRegistration = async () => {
+    if (!event) return;
+    setTogglingRegistration(true);
+
+    try {
+      const { error } = await supabase
+        .from("events")
+        .update({ registration_open: !event.registration_open })
+        .eq("id", eventId);
+
+      if (error) throw error;
+
+      toast.success(
+        event.registration_open
+          ? "Registration closed"
+          : "Registration opened"
+      );
+      refetchEvent();
+    } catch (error: any) {
+      toast.error(error.message || "Failed to update registration status");
+    } finally {
+      setTogglingRegistration(false);
+    }
+  };
+
+  const handleRunDraw = async (isRerun = false) => {
     if (!participants || participants.length < 2) {
       toast.error("Need at least 2 participants to run the draw!");
       return;
@@ -58,13 +112,23 @@ const HostDashboard = () => {
     setRunningDraw(true);
 
     try {
+      // Delete existing matches if re-running
+      if (isRerun) {
+        await supabase.from("matches").delete().eq("event_id", eventId);
+        await supabase.from("messages").delete().eq("event_id", eventId);
+      }
+
       const response = await supabase.functions.invoke("run-secret-santa", {
         body: { eventId },
       });
 
       if (response.error) throw response.error;
 
-      toast.success("Secret Santa draw completed! Emails sent! 🎄");
+      toast.success(
+        isRerun
+          ? "Secret Santa re-drawn! New emails sent! 🎄"
+          : "Secret Santa draw completed! Emails sent! 🎄"
+      );
       refetch();
       refetchEvent();
     } catch (error: any) {
@@ -74,10 +138,54 @@ const HostDashboard = () => {
     }
   };
 
-  if (isLoading) {
+  if (isLoading || !user) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        {!user ? (
+          <Card className="max-w-md">
+            <CardHeader>
+              <CardTitle>Authentication Required</CardTitle>
+              <CardDescription>
+                Please sign in to access the host dashboard
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button
+                onClick={() => navigate("/auth")}
+                className="w-full bg-gradient-hero hover:opacity-90 transition-all"
+              >
+                Sign In
+              </Button>
+            </CardContent>
+          </Card>
+        ) : (
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        )}
+      </div>
+    );
+  }
+
+  // Check if user owns this event
+  if ((event as any)?.user_id && (event as any).user_id !== user.id) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <Card className="max-w-md">
+          <CardHeader>
+            <CardTitle>Access Denied</CardTitle>
+            <CardDescription>
+              You don't have permission to access this event dashboard
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button
+              onClick={() => navigate("/")}
+              className="w-full"
+              variant="outline"
+            >
+              Go Home
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -93,19 +201,36 @@ const HostDashboard = () => {
 
         <Card className="shadow-festive">
           <CardHeader>
-            <CardTitle className="flex items-center justify-between">
+            <CardTitle className="flex items-center justify-between flex-wrap gap-2">
               <span>Share Join Link</span>
-              {event?.draw_completed && (
-                <Badge variant="secondary" className="bg-gradient-accent">
-                  Draw Completed ✓
+              <div className="flex items-center gap-2">
+                {event?.draw_completed && (
+                  <Badge variant="secondary" className="bg-gradient-accent">
+                    Draw Completed ✓
+                  </Badge>
+                )}
+                <Badge
+                  variant={event?.registration_open ? "default" : "secondary"}
+                >
+                  {event?.registration_open ? (
+                    <>
+                      <Unlock className="h-3 w-3 mr-1" />
+                      Open
+                    </>
+                  ) : (
+                    <>
+                      <Lock className="h-3 w-3 mr-1" />
+                      Closed
+                    </>
+                  )}
                 </Badge>
-              )}
+              </div>
             </CardTitle>
             <CardDescription>
               Share this link with participants to join your event
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-3">
             <div className="flex gap-2">
               <input
                 type="text"
@@ -117,6 +242,29 @@ const HostDashboard = () => {
                 {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
               </Button>
             </div>
+            <Button
+              onClick={toggleRegistration}
+              variant="outline"
+              className="w-full"
+              disabled={togglingRegistration}
+            >
+              {togglingRegistration ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Updating...
+                </>
+              ) : event?.registration_open ? (
+                <>
+                  <Lock className="mr-2 h-4 w-4" />
+                  Close Registration
+                </>
+              ) : (
+                <>
+                  <Unlock className="mr-2 h-4 w-4" />
+                  Open Registration
+                </>
+              )}
+            </Button>
           </CardContent>
         </Card>
 
@@ -150,9 +298,19 @@ const HostDashboard = () => {
           </CardContent>
         </Card>
 
+        {participants && participants.length < 2 && (
+          <Alert>
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription>
+              Need at least 2 participants to run the draw. Currently have{" "}
+              {participants.length} participant{participants.length !== 1 ? "s" : ""}.
+            </AlertDescription>
+          </Alert>
+        )}
+
         {participants && participants.length >= 2 && !event?.draw_completed && (
           <Button
-            onClick={handleRunDraw}
+            onClick={() => handleRunDraw(false)}
             className="w-full bg-gradient-hero hover:opacity-90 transition-all text-lg py-6"
             disabled={runningDraw}
           >
@@ -168,6 +326,40 @@ const HostDashboard = () => {
               </>
             )}
           </Button>
+        )}
+
+        {event?.draw_completed && (
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button
+                variant="outline"
+                className="w-full text-lg py-6 border-2"
+                disabled={runningDraw}
+              >
+                <RefreshCw className="mr-2 h-5 w-5" />
+                Re-run Draw (New Assignments)
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Re-run Secret Santa Draw?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This will delete all existing assignments and messages, create new random
+                  pairings, and send new assignment emails to all participants. This action
+                  cannot be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={() => handleRunDraw(true)}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  Yes, Re-run Draw
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         )}
       </div>
     </div>
