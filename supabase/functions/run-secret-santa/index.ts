@@ -158,7 +158,7 @@ serve(async (req) => {
 
       emailPromises.push(
         resend.emails.send({
-          from: "Secret Santa <onboarding@resend.dev>",
+          from: "Secret Santa <noreply@yourdomain.com>", // Change to your verified domain
           to: [giver.email],
           subject: `🎄 Your Secret Santa Assignment!`,
           html,

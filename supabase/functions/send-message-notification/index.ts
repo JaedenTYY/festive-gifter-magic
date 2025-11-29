@@ -42,7 +42,7 @@ serve(async (req) => {
 
     // Send notification email
     const emailResponse = await resend.emails.send({
-      from: "Secret Santa <onboarding@resend.dev>",
+      from: "Secret Santa <noreply@yourdomain.com>", // Change to your verified domain
       to: [recipient.email],
       subject: "🎄 New Secret Santa Message!",
       html: `
