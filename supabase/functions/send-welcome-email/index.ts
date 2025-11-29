@@ -79,7 +79,7 @@ serve(async (req) => {
     `;
 
     await resend.emails.send({
-      from: "Secret Santa <noreply@yourdomain.com>", // Change to your verified domain
+      from: "Secret Santa <noreply@secretsantahg.work.gd>",
       to: [participant.email],
       subject: `🎄 Welcome to ${event.name}!`,
       html,
