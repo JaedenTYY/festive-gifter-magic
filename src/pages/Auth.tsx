@@ -21,15 +21,19 @@ const Auth = () => {
 
     try {
       if (isLogin) {
-        const { error } = await supabase.auth.signInWithPassword({
+        const { data, error } = await supabase.auth.signInWithPassword({
           email,
           password,
         });
         if (error) throw error;
-        toast.success("Logged in successfully!");
-        navigate("/");
+        
+        // Wait for session to be established
+        if (data.session) {
+          toast.success("Logged in successfully!");
+          navigate("/");
+        }
       } else {
-        const { error } = await supabase.auth.signUp({
+        const { data, error } = await supabase.auth.signUp({
           email,
           password,
           options: {
@@ -37,8 +41,14 @@ const Auth = () => {
           },
         });
         if (error) throw error;
-        toast.success("Account created! You can now create events.");
-        navigate("/");
+        
+        // Wait for session to be established
+        if (data.session) {
+          toast.success("Account created! You can now create events.");
+          navigate("/");
+        } else {
+          toast.success("Please check your email to confirm your account.");
+        }
       }
     } catch (error: any) {
       toast.error(error.message || "Authentication failed");
