@@ -48,24 +48,15 @@ const CreateEvent = () => {
     setLoading(true);
 
     try {
-      // Try to insert with user_id, but handle if column doesn't exist yet
-      const insertData: any = { 
-        name: eventName, 
-        event_description: eventDescription,
-        host_email: hostEmail,
-        registration_open: true,
-      };
-      
-      // Only add user_id if it exists in schema
-      try {
-        insertData.user_id = user.id;
-      } catch (e) {
-        console.log("user_id column not available yet, continuing without it");
-      }
-
       const { data, error } = await supabase
         .from("events")
-        .insert([insertData])
+        .insert([{ 
+          name: eventName, 
+          event_description: eventDescription,
+          host_email: hostEmail,
+          registration_open: true,
+          user_id: user.id,
+        }])
         .select()
         .single();
 
